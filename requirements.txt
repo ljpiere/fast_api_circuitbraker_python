@@ -1,0 +1,4 @@
+fastapi
+circuitbreaker
+requests
+logging

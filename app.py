@@ -1,56 +1,49 @@
-import time
+from fastapi import FastAPI
+import circuitbreaker
 import requests
+import logging
 
-class CircuitBreaker:
-    def __init__(self, max_failures, reset_timeout):
-        self.max_failures = max_failures
-        self.reset_timeout = reset_timeout
-        self.failure_count = 0
-        self.last_failure_time = 0
-        self.state = "CLOSED"
+app = FastAPI()
+logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S %z', level=logging.INFO)
+logger = logging.getLogger()
 
-    def call(self, func, *args, **kwargs):
-        if self.state == "OPEN":
-            if time.time() - self.last_failure_time > self.reset_timeout:
-                self.state = "HALF-OPEN"
-            else:
-                raise Exception("CircuitBreaker is OPEN. No calls allowed.")
+class MyCircuitBreaker(circuitbreaker.CircuitBreaker):
+    FAILURE_THRESHOLD = 5
+    RECOVERY_TIMEOUT = 60
+    EXPECTED_EXCEPTION = (requests.RequestException, requests.ConnectionError, requests.Timeout)
 
-        try:
-            result = func(*args, **kwargs)
-            self.reset()
-            return result
-        except Exception as e:
-            self.record_failure()
-            if self.failure_count >= self.max_failures:
-                self.trip()
-            raise e
-
-    def record_failure(self):
-        self.failure_count += 1
-        self.last_failure_time = time.time()
-
-    def reset(self):
-        self.failure_count = 0
-        self.state = "CLOSED"
-
-    def trip(self):
-        self.state = "OPEN"
-
-# Función que realiza la llamada a la API
-def get_data_from_api():
-    response = requests.get("https://jsonplaceholderw.typicode.com/posts/1")
-    if response.status_code != 200:
-        raise Exception(f"API call failed with status code: {response.status_code}")
-    return response.json()
-
-# Test del Circuit Breaker
-breaker = CircuitBreaker(max_failures=3, reset_timeout=5)
-
-for i in range(10):
+@MyCircuitBreaker()    
+def call_external():
+    BASE_URL = "https://swap1.dev"
+    END_POINT = "api/planets/1/"
     try:
-        result = breaker.call(get_data_from_api)
-        print(f"Attempt {i + 1}: Success! Data: {result}")
-    except Exception as e:
-        print(f"Attempt {i + 1}: {e}")
-    time.sleep(1)
+        resp = requests.get(f"{BASE_URL}/{END_POINT}")
+        resp.raise_for_status()  # Esto generará una excepción si el código de estado no es 200-299
+        data = resp.json()
+    except (requests.RequestException, requests.ConnectionError, requests.Timeout) as e:
+        logger.error(f"Error al conectar con la API: {e}")
+        raise  # Esto permitirá que el circuit breaker capture la excepción
+    return data
+
+@app.get("/")
+def implement_circuit_breaker():
+    try:
+        data = call_external()
+        return {
+            "status_code": 200,
+            "success": True,
+            "message": "Success get starwars data", 
+            "data": data
+        }
+    except circuitbreaker.CircuitBreakerError as e:
+        return {
+            "status_code": 503,
+            "success": False,
+            "message": f"Circuit breaker active: {e}"
+        }
+    except requests.RequestException as e:
+        return {
+            "status_code": 503,
+            "success": False,
+            "message": f"Request failed: {e}"
+        }
