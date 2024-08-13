@@ -9,9 +9,10 @@ logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S %z', level=logging.INFO)
 logger = logging.getLogger()
 
 class MyCircuitBreaker(CircuitBreaker):
-    FAILURE_THRESHOLD = 5
+    FAILURE_THRESHOLD = 1 # Vamos a mantener solo 1
     RECOVERY_TIMEOUT = 60
-    EXPECTED_EXCEPTION = (requests.RequestException, requests.ConnectionError, requests.Timeout)
+    EXPECTED_EXCEPTION = requests.exceptions.RequestException  # Captura todas las excepciones de requests
+    #EXPECTED_EXCEPTION = (requests.RequestException, requests.ConnectionError, requests.Timeout)
 
 @MyCircuitBreaker()
 def call_external_api():

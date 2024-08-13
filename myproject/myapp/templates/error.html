@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error</title>
+</head>
+<body>
+    <h1>Error en la solicitud</h1>
+    <p>{{ message }}</p>
+    {% if circuit_breaker %}
+    <p><strong>Nota:</strong> Este error fue causado por la activación del <strong>Circuit Breaker</strong>. La API externa ha fallado repetidamente y se han detenido temporalmente los intentos de conexión para proteger el sistema.</p>
+    {% else %}
+    <p>Ocurrió un error inesperado. Por favor, intenta nuevamente más tarde.</p>
+    {% endif %}
+</body>
+</html>

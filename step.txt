@@ -1,0 +1,2 @@
+python manage.py migrate
+conda activate espbig
