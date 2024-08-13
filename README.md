@@ -1,104 +1,203 @@
-# Circuit braker using FastApi and Python in AWS
+# Django API Consumer with Circuit Breaker
 
-```jsx
-from fastapi import FastAPI
-import circuitbreaker
-import requests
-import logging
+This Django project demonstrates how to create a web application that consumes an external API (in this case, an AWS API) and implements a circuit breaker pattern. The circuit breaker helps to prevent repeated failed calls to the API by temporarily stopping the requests when the external service is unavailable.
 
-```
+## Table of Contents
 
-- **Imports:**
-    - `FastAPI`: A modern, fast (high-performance) web framework for building APIs with Python 3.6+.
-    - `circuitbreaker`: A library for implementing the Circuit Breaker design pattern.
-    - `requests`: A popular HTTP library for making requests.
-    - `logging`: Python's standard logging module for tracking events during program execution.
+- [Installation](#installation)
+- [Project Setup](#project-setup)
+- [Creating the Circuit Breaker](#creating-the-circuit-breaker)
+- [Building the Django Views](#building-the-django-views)
+- [Creating the HTML Templates](#creating-the-html-templates)
+- [Testing the Application](#testing-the-application)
+- [Notes](#notes)
 
-```jsx
-app = FastAPI()
-logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S %z', level=logging.INFO)
-logger = logging.getLogger()
+## Installation
 
-```
+Before you begin, make sure you have Python installed on your system. Then, follow these steps to install the necessary dependencies.
 
-- **App Initialization and Logging Configuration:**
-    - `app = FastAPI()`: Creates an instance of the FastAPI application.
-    - `logging.basicConfig(...)`: Sets the basic configuration for logging, including the date format and logging level.
-    - `logger = logging.getLogger()`: Retrieves a logger instance for logging messages.
+1. **Create a virtual environment (optional but recommended):**
 
-```jsx
-class MyCircuitBreaker(circuitbreaker.CircuitBreaker):
-    FAILURE_THRESHOLD = 5
-    RECOVERY_TIMEOUT = 60
-    EXPECTED_EXCEPTION = (requests.RequestException, requests.ConnectionError, requests.Timeout)
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows, use `venv\\Scripts\\activate`
+    ```
 
-```
+2. **Install Django and required libraries:**
 
-- **Custom Circuit Breaker Class:**
-    - `class MyCircuitBreaker(circuitbreaker.CircuitBreaker)`: Defines a custom circuit breaker class extending the `CircuitBreaker` class from the `circuitbreaker` library.
-    - `FAILURE_THRESHOLD = 5`: The number of consecutive failures before the circuit breaker trips.
-    - `RECOVERY_TIMEOUT = 60`: The time (in seconds) to wait before attempting to reset the circuit breaker.
-    - `EXPECTED_EXCEPTION = (requests.RequestException, requests.ConnectionError, requests.Timeout)`: Exceptions that should be considered failures by the circuit breaker.
+    ```bash
+    pip install Django circuitbreaker requests
+    ```
 
-```jsx
-@MyCircuitBreaker()
-def call_external():
-    BASE_URL = "<https://swap1.dev>"
-    END_POINT = "api/planets/1/"
-    try:
-        resp = requests.get(f"{BASE_URL}/{END_POINT}")
-        resp.raise_for_status()  # This will raise an exception if the status code is not 200-299
-        data = resp.json()
-    except (requests.RequestException, requests.ConnectionError, requests.Timeout) as e:
-        logger.error(f"Error connecting to API: {e}")
-        raise  # This will allow the circuit breaker to capture the exception
-    return data
+## Project Setup
 
-```
+1. **Create a Django project:**
 
-- **External Call Function with Circuit Breaker:**
-    - `@MyCircuitBreaker()`: Decorates the function with the custom circuit breaker, applying its logic.
-    - `BASE_URL = "<https://swap1.dev>"`: Sets the base URL for the external API.
-    - `END_POINT = "api/planets/1/"`: Sets the specific endpoint for the API call.
-    - `resp = requests.get(f"{BASE_URL}/{END_POINT}")`: Makes a GET request to the specified API endpoint.
-    - `resp.raise_for_status()`: Raises an exception if the HTTP status code is not in the range 200-299.
-    - `data = resp.json()`: Parses the response JSON into a Python dictionary.
-    - `except (requests.RequestException, requests.ConnectionError, requests.Timeout) as e`: Catches specific exceptions that are considered failures.
-    - `logger.error(f"Error connecting to API: {e}")`: Logs the error message.
-    - `raise`: Re-raises the caught exception to be handled by the circuit breaker.
+    ```bash
+    django-admin startproject myproject
+    cd myproject
+    ```
 
-```jsx
-@app.get("/")
-def implement_circuit_breaker():
-    try:
-        data = call_external()
-        return {
-            "status_code": 200,
-            "success": True,
-            "message": "Success get starwars data",
-            "data": data
-        }
-    except circuitbreaker.CircuitBreakerError as e:
-        return {
-            "status_code": 503,
-            "success": False,
-            "message": f"Circuit breaker active: {e}"
-        }
-    except requests.RequestException as e:
-        return {
-            "status_code": 503,
-            "success": False,
-            "message": f"Request failed: {e}"
-        }
+2. **Create a Django app:**
 
-```
+    ```bash
+    django-admin startapp myapp
+    ```
 
-- **API Route and Circuit Breaker Implementation:**
-    - `@app.get("/")`: Defines a GET route at the root URL (`/`) for the FastAPI application.
-    - `def implement_circuit_breaker()`: Function to handle requests to the root URL.
-    - `data = call_external()`: Calls the `call_external` function to fetch data from the external API.
-    - `return {...}`: Returns a JSON response containing the status code, success flag, message, and data.
-    - `except circuitbreaker.CircuitBreakerError as e`: Catches exceptions raised by the circuit breaker.
-    - `return {...}`: Returns a JSON response indicating that the circuit breaker is active.
-    - `except requests.RequestException as e`: Catches request-related exceptions.
-    - `return {...}`: Returns a JSON response indicating that the request failed.
+3. **Update the `settings.py` to include the app:**
+
+    ```python
+    # myproject/settings.py
+
+    INSTALLED_APPS = [
+        ...
+        'myapp',
+    ]
+    ```
+
+## Creating the Circuit Breaker
+
+We'll use the `circuitbreaker` Python library to implement the circuit breaker pattern in Django.
+
+1. **Define the circuit breaker class and function to call the external API in `views.py`:**
+
+    ```python
+    # myapp/views.py
+
+    from django.shortcuts import render
+    from circuitbreaker import CircuitBreaker, CircuitBreakerError
+    import requests
+    import logging
+
+    logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S %z', level=logging.INFO)
+    logger = logging.getLogger()
+
+    class MyCircuitBreaker(CircuitBreaker):
+        FAILURE_THRESHOLD = 5  # Number of failures before the circuit breaker activates
+        RECOVERY_TIMEOUT = 60  # Time in seconds before the circuit breaker allows new attempts
+        EXPECTED_EXCEPTION = requests.exceptions.RequestException  # Capture all requests exceptions
+
+    @MyCircuitBreaker()
+    def call_external_api():
+        BASE_URL = "https://6iqdf9i7w9.execute-api.us-east-1.amazonaws.com/dev"
+        END_POINT = "dev"
+        try:
+            resp = requests.get(f"{BASE_URL}/{END_POINT}")
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error connecting to the API: {e}")
+            raise
+    ```
+
+## Building the Django Views
+
+2. **Create the view that handles API requests and renders the response in `views.py`:**
+
+    ```python
+    # myapp/views.py
+
+    def index(request):
+        try:
+            data = call_external_api()
+            return render(request, "index.html", {"data": data})
+        except CircuitBreakerError:
+            message = "Repeated request failures. The Circuit Breaker has been activated to prevent further attempts temporarily."
+            return render(request, "error.html", {"message": message, "circuit_breaker": True}, status=503)
+        except Exception as e:
+            message = f"An error occurred while trying to connect to the API: {str(e)}"
+            return render(request, "error.html", {"message": message, "circuit_breaker": False}, status=503)
+    ```
+
+3. **Configure the URL routing:**
+
+    - **In `urls.py` of the app:**
+
+        ```python
+        # myapp/urls.py
+
+        from django.urls import path
+        from . import views
+
+        urlpatterns = [
+            path('', views.index, name='index'),
+        ]
+        ```
+
+    - **In `urls.py` of the project:**
+
+        ```python
+        # myproject/urls.py
+
+        from django.contrib import admin
+        from django.urls import include, path
+
+        urlpatterns = [
+            path('admin/', admin.site.urls),
+            path('', include('myapp.urls')),
+        ]
+        ```
+
+## Creating the HTML Templates
+
+4. **Create the HTML templates to display data or error messages:**
+
+    - **`index.html`:**
+
+        ```html
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Data from API</title>
+        </head>
+        <body>
+            <h1>Data from API</h1>
+            <pre>{{ data | safe }}</pre>
+        </body>
+        </html>
+        ```
+
+    - **`error.html`:**
+
+        ```html
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Error</title>
+        </head>
+        <body>
+            <h1>Request Error</h1>
+            <p>{{ message }}</p>
+            {% if circuit_breaker %}
+            <p><strong>Note:</strong> This error was caused by the activation of the <strong>Circuit Breaker</strong>. The external API has failed repeatedly, and connection attempts have been temporarily halted to protect the system.</p>
+            {% else %}
+            <p>An unexpected error occurred. Please try again later.</p>
+            {% endif %}
+        </body>
+        </html>
+        ```
+
+## Testing the Application
+
+5. **Run the Django development server:**
+
+    ```bash
+    python manage.py runserver
+    ```
+
+6. **Test the application:**
+
+    - **Normal Operation:** When the external API is available, you should see the data returned by the API on the `index.html` page.
+    - **Circuit Breaker Activation:** Simulate the API being down (e.g., by turning off the API). After the defined number of failures (`FAILURE_THRESHOLD`), the circuit breaker will activate, and you should see the error message indicating that the circuit breaker has been triggered.
+
+## Notes
+
+- The `FAILURE_THRESHOLD` in `MyCircuitBreaker` is set to 5 by default, meaning the circuit breaker will activate after 5 consecutive failures.
+- The `RECOVERY_TIMEOUT` is the time (in seconds) after which the circuit breaker will allow new attempts to connect to the API.
+- Adjust these values according to your application's needs.
+
+This project is a simple demonstration of how to integrate a circuit breaker into a Django application. For production use, consider additional error handling, logging, and monitoring strategies to ensure the robustness of your application.
