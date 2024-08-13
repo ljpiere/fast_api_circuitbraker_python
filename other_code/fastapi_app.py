@@ -14,8 +14,8 @@ class MyCircuitBreaker(circuitbreaker.CircuitBreaker):
 
 @MyCircuitBreaker()    
 def call_external():
-    BASE_URL = "https://swap1.dev"
-    END_POINT = "api/planets/1/"
+    BASE_URL = "https://6iqdf9i7w9.execute-api.us-east-1.amazonaws.com/dev"
+    END_POINT = "dev"
     try:
         resp = requests.get(f"{BASE_URL}/{END_POINT}")
         resp.raise_for_status()  # Esto generará una excepción si el código de estado no es 200-299

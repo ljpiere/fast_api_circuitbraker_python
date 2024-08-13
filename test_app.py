@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 import requests  # Asegúrate de importar requests
-from app import app, MyCircuitBreaker, call_external
+from fast_api_circuitbreaker_python.other_code.fastapi_app import app, MyCircuitBreaker, call_external
 
 client = TestClient(app)
 
