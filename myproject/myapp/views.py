@@ -2,13 +2,13 @@
 #-----------------------------------------------------------------------------------
 # Basic DJango APP with a Python Circuit breaker
 #
-# Line 12: Check the time 
-# Line 16: Circuit Breaker configuration:
+# Line 20: Check the time 
+# Line 23: Circuit Breaker configuration:
 #       FAILURE_THRESHOLD: Max retries
 #       RECOVERY_TIMEOUT: Time to try again
 #       EXPECTED_EXCEPTION: Which exception activate circuit breaker
-# Line 26: Call the external API
-# Line 35: Define index behaviour
+# Line 29: Call the external API
+# Line 32: Define index behaviour
 #-----------------------------------------------------------------------------------
 
 from django.shortcuts import render
