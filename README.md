@@ -1,203 +1,84 @@
-# Django API Consumer with Circuit Breaker
+# Django Circuit Breaker Implementation
 
-This Django project demonstrates how to create a web application that consumes an external API (in this case, an AWS API) and implements a circuit breaker pattern. The circuit breaker helps to prevent repeated failed calls to the API by temporarily stopping the requests when the external service is unavailable.
+Este proyecto demuestra cómo implementar un `Circuit Breaker` en una aplicación Django para gestionar llamadas a una API externa de manera robusta. El objetivo es proteger la aplicación de fallos recurrentes en la API, permitiendo un manejo controlado de errores.
 
-## Table of Contents
+## Descripción de la Prueba
 
-- [Installation](#installation)
-- [Project Setup](#project-setup)
-- [Creating the Circuit Breaker](#creating-the-circuit-breaker)
-- [Building the Django Views](#building-the-django-views)
-- [Creating the HTML Templates](#creating-the-html-templates)
-- [Testing the Application](#testing-the-application)
-- [Notes](#notes)
+La prueba consiste en desplegar una aplicación Django que realiza solicitudes a una API implementada en AWS Lambda. La función Lambda se expone a través de API Gateway, y la aplicación Django utiliza un `Circuit Breaker` para manejar errores de conexión a la API de manera eficiente.
 
-## Installation
+## Objetivos
 
-Before you begin, make sure you have Python installed on your system. Then, follow these steps to install the necessary dependencies.
+- **Implementar y configurar un `Circuit Breaker`**: Garantizar que la aplicación sea resistente a fallos repetidos de la API externa.
+- **Desplegar una función Lambda**: Utilizar AWS Lambda para alojar la API externa y exponerla a través de API Gateway.
+- **Validar la robustez de la aplicación**: Comprobar que el `Circuit Breaker` funcione correctamente bajo condiciones de fallo.
 
-1. **Create a virtual environment (optional but recommended):**
+## Pasos para la Implementación
 
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\\Scripts\\activate`
-    ```
+### 1. Desplegar la Función Lambda
 
-2. **Install Django and required libraries:**
+1. **Crear la función Lambda**:
+    - Desarrolla la función Lambda en Python, que será la API a la que se realizará la llamada.
+    - Empaqueta la función Lambda y sus dependencias en un archivo `app.zip`.
 
-    ```bash
-    pip install Django circuitbreaker requests
-    ```
+2. **Desplegar en AWS**:
+    - Sube el archivo `app.zip` a AWS Lambda.
+    - Configura la función Lambda con los permisos necesarios.
 
-## Project Setup
+3. **Configurar API Gateway**:
+    - Crea un nuevo API Gateway.
+    - Configura un endpoint que apunte a la función Lambda desplegada.
+    - Asigna la URL pública generada por API Gateway.
 
-1. **Create a Django project:**
+### 2. Configurar la Aplicación Django
 
-    ```bash
-    django-admin startproject myproject
-    cd myproject
-    ```
+1. **Instalar dependencias**:
+    - Clona este repositorio y sigue los pasos en la sección de instalación.
 
-2. **Create a Django app:**
+2. **Configurar las variables de entorno**:
+    - Actualiza la URL base en el código Django (`BASE_URL`) con la URL de la API Gateway.
 
-    ```bash
-    django-admin startapp myapp
-    ```
+3. **Desplegar la aplicación Django**:
+    - Utiliza `python manage.py runserver` para ejecutar la aplicación localmente o despliega en un servidor de producción.
 
-3. **Update the `settings.py` to include the app:**
+### 3. Pruebas de la Aplicación
 
-    ```python
-    # myproject/settings.py
+1. **Simulación de errores**:
+    - Intencionalmente, cambia la URL en `BASE_URL` para que apunte a un endpoint incorrecto y observe el comportamiento del `Circuit Breaker`.
+    - Realiza varias solicitudes a la API para verificar que el `Circuit Breaker` se active tras los fallos configurados.
 
-    INSTALLED_APPS = [
-        ...
-        'myapp',
-    ]
-    ```
+2. **Monitoreo de logs**:
+    - Revisa los logs para asegurarte de que los errores y las activaciones del `Circuit Breaker` se registren correctamente.
 
-## Creating the Circuit Breaker
+## Tecnologías
 
-We'll use the `circuitbreaker` Python library to implement the circuit breaker pattern in Django.
+- **Lenguajes**:
+    - Python 3.8+
+    - JavaScript (para el frontend en Django)
+- **Frameworks**:
+    - Django 3.2+ (para la aplicación web)
+    - AWS Lambda (para la API en la nube)
+- **Librerías**:
+    - `requests`: Para realizar llamadas HTTP en Python.
+    - `circuitbreaker`: Para implementar el patrón de diseño `Circuit Breaker`.
+    - `logging`: Para gestionar los logs en la aplicación Django.
+- **Servicios en la nube**:
+    - AWS Lambda
+    - API Gateway
 
-1. **Define the circuit breaker class and function to call the external API in `views.py`:**
+## Resultados
 
-    ```python
-    # myapp/views.py
+Al finalizar la implementación:
 
-    from django.shortcuts import render
-    from circuitbreaker import CircuitBreaker, CircuitBreakerError
-    import requests
-    import logging
+- La aplicación Django es capaz de realizar llamadas a la API externa de manera confiable.
+- El `Circuit Breaker` se activa correctamente después de un número determinado de fallos, protegiendo la aplicación de intentos fallidos repetidos.
+- Los errores y eventos críticos se registran en los logs para un monitoreo efectivo.
 
-    logging.basicConfig(datefmt='%Y-%m-%d %H:%M:%S %z', level=logging.INFO)
-    logger = logging.getLogger()
+## Conclusiones
 
-    class MyCircuitBreaker(CircuitBreaker):
-        FAILURE_THRESHOLD = 5  # Number of failures before the circuit breaker activates
-        RECOVERY_TIMEOUT = 60  # Time in seconds before the circuit breaker allows new attempts
-        EXPECTED_EXCEPTION = requests.exceptions.RequestException  # Capture all requests exceptions
+- El uso de un `Circuit Breaker` es fundamental para construir aplicaciones resilientes, especialmente cuando dependen de servicios externos que pueden fallar.
+- AWS Lambda, combinado con API Gateway, proporciona una manera eficiente y escalable de desplegar y consumir APIs en la nube.
+- La integración de Django con servicios externos puede manejarse de manera robusta utilizando patrones de diseño como `Circuit Breaker`, mejorando la estabilidad y confiabilidad de la aplicación en producción.
 
-    @MyCircuitBreaker()
-    def call_external_api():
-        BASE_URL = "https://6iqdf9i7w9.execute-api.us-east-1.amazonaws.com/dev"
-        END_POINT = "dev"
-        try:
-            resp = requests.get(f"{BASE_URL}/{END_POINT}")
-            resp.raise_for_status()
-            return resp.json()
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error connecting to the API: {e}")
-            raise
-    ```
+## Licencia
 
-## Building the Django Views
-
-2. **Create the view that handles API requests and renders the response in `views.py`:**
-
-    ```python
-    # myapp/views.py
-
-    def index(request):
-        try:
-            data = call_external_api()
-            return render(request, "index.html", {"data": data})
-        except CircuitBreakerError:
-            message = "Repeated request failures. The Circuit Breaker has been activated to prevent further attempts temporarily."
-            return render(request, "error.html", {"message": message, "circuit_breaker": True}, status=503)
-        except Exception as e:
-            message = f"An error occurred while trying to connect to the API: {str(e)}"
-            return render(request, "error.html", {"message": message, "circuit_breaker": False}, status=503)
-    ```
-
-3. **Configure the URL routing:**
-
-    - **In `urls.py` of the app:**
-
-        ```python
-        # myapp/urls.py
-
-        from django.urls import path
-        from . import views
-
-        urlpatterns = [
-            path('', views.index, name='index'),
-        ]
-        ```
-
-    - **In `urls.py` of the project:**
-
-        ```python
-        # myproject/urls.py
-
-        from django.contrib import admin
-        from django.urls import include, path
-
-        urlpatterns = [
-            path('admin/', admin.site.urls),
-            path('', include('myapp.urls')),
-        ]
-        ```
-
-## Creating the HTML Templates
-
-4. **Create the HTML templates to display data or error messages:**
-
-    - **`index.html`:**
-
-        ```html
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Data from API</title>
-        </head>
-        <body>
-            <h1>Data from API</h1>
-            <pre>{{ data | safe }}</pre>
-        </body>
-        </html>
-        ```
-
-    - **`error.html`:**
-
-        ```html
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Error</title>
-        </head>
-        <body>
-            <h1>Request Error</h1>
-            <p>{{ message }}</p>
-            {% if circuit_breaker %}
-            <p><strong>Note:</strong> This error was caused by the activation of the <strong>Circuit Breaker</strong>. The external API has failed repeatedly, and connection attempts have been temporarily halted to protect the system.</p>
-            {% else %}
-            <p>An unexpected error occurred. Please try again later.</p>
-            {% endif %}
-        </body>
-        </html>
-        ```
-
-## Testing the Application
-
-5. **Run the Django development server:**
-
-    ```bash
-    python manage.py runserver
-    ```
-
-6. **Test the application:**
-
-    - **Normal Operation:** When the external API is available, you should see the data returned by the API on the `index.html` page.
-    - **Circuit Breaker Activation:** Simulate the API being down (e.g., by turning off the API). After the defined number of failures (`FAILURE_THRESHOLD`), the circuit breaker will activate, and you should see the error message indicating that the circuit breaker has been triggered.
-
-## Notes
-
-- The `FAILURE_THRESHOLD` in `MyCircuitBreaker` is set to 5 by default, meaning the circuit breaker will activate after 5 consecutive failures.
-- The `RECOVERY_TIMEOUT` is the time (in seconds) after which the circuit breaker will allow new attempts to connect to the API.
-- Adjust these values according to your application's needs.
-
-This project is a simple demonstration of how to integrate a circuit breaker into a Django application. For production use, consider additional error handling, logging, and monitoring strategies to ensure the robustness of your application.
+Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
