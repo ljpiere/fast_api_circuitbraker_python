@@ -32,7 +32,7 @@ def call_external_api():
     Returns:
         json: Response or exception
     """
-    BASE_URL = "https://6iqdf9i7w9.execute-api.us-east-1.amazonaws.com/dev"
+    BASE_URL = "https://dkymmdlzs4.execute-api.us-east-1.amazonaws.com"
     END_POINT = "dev"
     resp = requests.get(f"{BASE_URL}/{END_POINT}")
     resp.raise_for_status()  # Launch an Exception for HTTP error
