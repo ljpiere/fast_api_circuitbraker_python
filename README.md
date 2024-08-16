@@ -5,6 +5,7 @@ Este proyecto demuestra cómo implementar un `Circuit Breaker` en una aplicació
 ## Descripción de la Prueba
 
 La prueba consiste en desplegar una aplicación Django que realiza solicitudes a una API implementada en AWS Lambda. La función Lambda se expone a través de API Gateway, y la aplicación Django utiliza un `Circuit Breaker` para manejar errores de conexión a la API de manera eficiente. Si la respuesta de la API es correcta se mostrará la página index.html con la respuesta de la API. De lo contrario, luego de 2 intentos de reconectar se habilitará el Circuit Breaker.
+![image info](./media/behaviour_code.jpg)
 
 ## Objetivos
 
