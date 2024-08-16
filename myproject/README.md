@@ -1,4 +1,6 @@
-Este código es un ejemplo de cómo implementar un "Circuit Breaker" en una aplicación Django para manejar las fallas en las solicitudes a una API externa. A continuación se explica cada parte del código:
+# Circuit breaker en python
+
+Implementaremos un "Circuit Breaker" en una aplicación Django para manejar las fallas en las solicitudes a una API externa (Lambda). A continuación se explica cada parte del código:
 
 1. **Importaciones**:
     
@@ -35,9 +37,10 @@ Este código es un ejemplo de cómo implementar un "Circuit Breaker" en una apli
     
     Se define una clase `MyCircuitBreaker` que hereda de `CircuitBreaker`. Esta clase tiene tres configuraciones importantes:
     
-    - `FAILURE_THRESHOLD`: El número máximo de intentos fallidos antes de que se active el Circuit Breaker.
-    - `RECOVERY_TIMEOUT`: El tiempo en segundos antes de volver a intentar después de que se haya activado el Circuit Breaker.
-    - `EXPECTED_EXCEPTION`: Las excepciones que se consideran fallas para el Circuit Breaker.
+    - `FAILURE_THRESHOLD`: El número máximo de intentos fallidos antes de que se active el Circuit Breaker. En este caso vamos a setear este atributo en 2.
+    - `RECOVERY_TIMEOUT`: El tiempo en segundos antes de volver a intentar después de que se haya activado el Circuit Breaker. Pondremos 19 segundos.
+    - `EXPECTED_EXCEPTION`: Las excepciones que se consideran fallas para el Circuit Breaker. Probaremos algunos errores de conexión a la API. Aquí podriamos colocar otros errores que el circuit breaker debería de capturar.
+    
 4. **Definición de la función `call_external_api`**:
     
     ```python
