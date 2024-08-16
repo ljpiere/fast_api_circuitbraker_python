@@ -70,6 +70,7 @@ Se utilizará la siguiente arquitectura para el proyecto:
 - **Servicios en la nube**:
     - AWS Lambda
     - API Gateway
+    - EC2
 
 ## Resultados
 
