@@ -4,7 +4,7 @@ Este proyecto demuestra cómo implementar un `Circuit Breaker` en una aplicació
 
 ## Descripción de la Prueba
 
-La prueba consiste en desplegar una aplicación Django que realiza solicitudes a una API implementada en AWS Lambda. La función Lambda se expone a través de API Gateway, y la aplicación Django utiliza un `Circuit Breaker` para manejar errores de conexión a la API de manera eficiente.
+La prueba consiste en desplegar una aplicación Django que realiza solicitudes a una API implementada en AWS Lambda. La función Lambda se expone a través de API Gateway, y la aplicación Django utiliza un `Circuit Breaker` para manejar errores de conexión a la API de manera eficiente. Si la respuesta de la API es correcta se mostrará la página index.html con la respuesta de la API. De lo contrario, luego de 2 intentos de reconectar se habilitará el Circuit Breaker.
 
 ## Objetivos
 
@@ -14,6 +14,11 @@ La prueba consiste en desplegar una aplicación Django que realiza solicitudes a
 
 ## Pasos para la Implementación
 
+Se utilizará la siguiente arquitectura para el proyecto:
+
+![image info](./media/CircuitBreaker.jpg)
+
+
 ### 1. Desplegar la Función Lambda
 
 1. **Crear la función Lambda**:
@@ -21,33 +26,34 @@ La prueba consiste en desplegar una aplicación Django que realiza solicitudes a
     - Empaqueta la función Lambda y sus dependencias en un archivo `app.zip`.
 
 2. **Desplegar en AWS**:
-    - Sube el archivo `app.zip` a AWS Lambda.
-    - Configura la función Lambda con los permisos necesarios.
+    - Se crea el código python para consultar una API y se exporta la librería `request` en un paquete ZIP.
+    - Se crea la función en AWS Lambda y se sube el archivo `app.zip` a AWS Lambda.
+    - Configurar la función Lambda con los permisos necesarios.
 
 3. **Configurar API Gateway**:
-    - Crea un nuevo API Gateway.
-    - Configura un endpoint que apunte a la función Lambda desplegada.
-    - Asigna la URL pública generada por API Gateway.
+    - Crear un nuevo API Gateway, especificamente una API REST.
+    - Se configura un endpoint que apunte a la función Lambda desplegada.
+    - Asignar la URL pública generada por API Gateway para un stage especifico.
 
 ### 2. Configurar la Aplicación Django
 
 1. **Instalar dependencias**:
-    - Clona este repositorio y sigue los pasos en la sección de instalación.
+    - Clonar repositorio y sigue los pasos en la sección de instalación.
 
 2. **Configurar las variables de entorno**:
-    - Actualiza la URL base en el código Django (`BASE_URL`) con la URL de la API Gateway.
+    - Actualizar la URL base en el código Django (`BASE_URL`) con la URL de la API Gateway.
 
 3. **Desplegar la aplicación Django**:
-    - Utiliza `python manage.py runserver` para ejecutar la aplicación localmente o despliega en un servidor de producción.
+    - Utilizar el comando `python manage.py runserver` para ejecutar la aplicación localmente o despliega en un servidor de producción.
 
 ### 3. Pruebas de la Aplicación
 
 1. **Simulación de errores**:
     - Intencionalmente, cambia la URL en `BASE_URL` para que apunte a un endpoint incorrecto y observe el comportamiento del `Circuit Breaker`.
-    - Realiza varias solicitudes a la API para verificar que el `Circuit Breaker` se active tras los fallos configurados.
+    - Realizar varias solicitudes a la API para verificar que el `Circuit Breaker` se active tras los fallos configurados.
 
 2. **Monitoreo de logs**:
-    - Revisa los logs para asegurarte de que los errores y las activaciones del `Circuit Breaker` se registren correctamente.
+    - Revisar los logs para asegurarte de que los errores y las activaciones del `Circuit Breaker` se registren correctamente.
 
 ## Tecnologías
 
@@ -78,7 +84,3 @@ Al finalizar la implementación:
 - El uso de un `Circuit Breaker` es fundamental para construir aplicaciones resilientes, especialmente cuando dependen de servicios externos que pueden fallar.
 - AWS Lambda, combinado con API Gateway, proporciona una manera eficiente y escalable de desplegar y consumir APIs en la nube.
 - La integración de Django con servicios externos puede manejarse de manera robusta utilizando patrones de diseño como `Circuit Breaker`, mejorando la estabilidad y confiabilidad de la aplicación en producción.
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.
